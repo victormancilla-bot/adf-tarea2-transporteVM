@@ -15,8 +15,29 @@
 					"name": "source1"
 				}
 			],
-			"sinks": [],
-			"transformations": [],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "dw_silver_incidentes_sql",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "filter1"
+				},
+				{
+					"name": "derivedColumn1"
+				},
+				{
+					"name": "aggregate1"
+				},
+				{
+					"name": "alterRow1"
+				}
+			],
 			"scriptLines": [
 				"source(output(",
 				"          AnioFuente as string,",
@@ -32,7 +53,59 @@
 				"     allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     isolationLevel: 'READ_UNCOMMITTED',",
-				"     format: 'table') ~> source1"
+				"     format: 'table') ~> source1",
+				"source1 filter(!isNull(IncidenteId) && trim(IncidenteId) != '') ~> filter1",
+				"filter1 derive(IncidenteId = trim(IncidenteId),",
+				"          Descripcion = trim(Descripcion),",
+				"          TipoIncidente = upper(trim(TipoIncidente)),",
+				"          Severidad = upper(trim(Severidad)),",
+				"          VehiculoId = iif(isNull(VehiculoId) || trim(VehiculoId) == '', toString(null()), trim(VehiculoId)),",
+				"          FechaHoraInicio = coalesce(\r",
+				"    toTimestamp(replace(replace(FechaHoraInicio, ' 1899-12-31T', ' '), '.000Z', ''), 'dd/MM/yyyy HH:mm'),\r",
+				"    toTimestamp(replace(replace(FechaHoraInicio, ' 1899-12-31T', ' '), '.000Z', ''), 'yyyy-MM-dd HH:mm:ss'),\r",
+				"    toTimestamp(replace(replace(FechaHoraInicio, ' 1899-12-31T', ' '), '.000Z', ''), 'yyyy-MM-dd HH:mm')\r",
+				"),",
+				"          FechaHoraFin = coalesce(     toTimestamp(replace(replace(FechaHoraFin, ' 1899-12-31T', ' '), '.000Z', ''), 'dd/MM/yyyy HH:mm'),     toTimestamp(replace(replace(FechaHoraFin, ' 1899-12-31T', ' '), '.000Z', ''), 'yyyy-MM-dd HH:mm:ss'),     toTimestamp(replace(replace(FechaHoraFin, ' 1899-12-31T', ' '), '.000Z', ''), 'yyyy-MM-dd HH:mm') ),",
+				"          FechaHoraRegistro = coalesce(     toTimestamp(replace(replace(FechaHoraRegistro, ' 1899-12-31T', ' '), '.000Z', ''), 'dd/MM/yyyy HH:mm'),     toTimestamp(replace(replace(FechaHoraRegistro, ' 1899-12-31T', ' '), '.000Z', ''), 'dd/MM/yyyy'),     toTimestamp(replace(replace(FechaHoraRegistro, ' 1899-12-31T', ' '), '.000Z', ''), 'yyyy-MM-dd HH:mm:ss'),     toTimestamp(replace(replace(FechaHoraRegistro, ' 1899-12-31T', ' '), '.000Z', ''), 'yyyy-MM-dd') )) ~> derivedColumn1",
+				"derivedColumn1 aggregate(groupBy(IncidenteId),",
+				"     TipoIncidente = last(TipoIncidente, true()),",
+				"          Severidad = last(Severidad, true()),",
+				"          FechaHoraInicio = last(FechaHoraInicio, true()),",
+				"          FechaHoraFin = last(FechaHoraFin, true()),",
+				"          FechaHoraRegistro = last(FechaHoraRegistro, true()),",
+				"          VehiculoId = last(VehiculoId, true()),",
+				"          Descripcion = last(Descripcion, true())) ~> aggregate1",
+				"aggregate1 alterRow(insertIf(true())) ~> alterRow1",
+				"alterRow1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          IncidenteId as string,",
+				"          TipoIncidente as string,",
+				"          Severidad as string,",
+				"          FechaHoraInicio as timestamp,",
+				"          FechaHoraFin as timestamp,",
+				"          FechaHoraRegistro as timestamp,",
+				"          VehiculoId as string,",
+				"          Descripcion as string",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          IncidenteId,",
+				"          TipoIncidente,",
+				"          Severidad,",
+				"          FechaHoraInicio,",
+				"          FechaHoraFin,",
+				"          FechaHoraRegistro,",
+				"          VehiculoId,",
+				"          Descripcion",
+				"     )) ~> sink1"
 			]
 		}
 	}
