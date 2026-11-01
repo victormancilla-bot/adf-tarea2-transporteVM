@@ -12,44 +12,44 @@
 		"type": "AzureSqlTable",
 		"schema": [
 			{
-				"name": "AnioFuente",
-				"type": "varchar"
-			},
-			{
 				"name": "ParadaHistoricaId",
-				"type": "varchar"
+				"type": "nvarchar"
 			},
 			{
 				"name": "CodigoPublicado",
-				"type": "varchar"
+				"type": "nvarchar"
 			},
 			{
 				"name": "NombreParada",
-				"type": "varchar"
+				"type": "nvarchar"
 			},
 			{
 				"name": "Zona",
-				"type": "varchar"
+				"type": "nvarchar"
 			},
 			{
 				"name": "Latitud",
-				"type": "varchar"
+				"type": "decimal",
+				"precision": 9,
+				"scale": 6
 			},
 			{
 				"name": "Longitud",
-				"type": "varchar"
+				"type": "decimal",
+				"precision": 9,
+				"scale": 6
 			},
 			{
 				"name": "VigenciaDesde",
-				"type": "varchar"
+				"type": "date"
 			},
 			{
 				"name": "VigenciaHasta",
-				"type": "varchar"
+				"type": "date"
 			},
 			{
 				"name": "Estado",
-				"type": "varchar"
+				"type": "nvarchar"
 			}
 		],
 		"typeProperties": {

@@ -12,36 +12,33 @@
 		"type": "AzureSqlTable",
 		"schema": [
 			{
-				"name": "AnioFuente",
-				"type": "varchar"
-			},
-			{
 				"name": "VehiculoId",
-				"type": "varchar"
+				"type": "nvarchar"
 			},
 			{
 				"name": "Placa",
-				"type": "varchar"
+				"type": "nvarchar"
 			},
 			{
 				"name": "TipoVehiculo",
-				"type": "varchar"
+				"type": "nvarchar"
 			},
 			{
 				"name": "CapacidadEfectiva",
-				"type": "varchar"
+				"type": "int",
+				"precision": 10
 			},
 			{
 				"name": "VigenciaDesde",
-				"type": "varchar"
+				"type": "date"
 			},
 			{
 				"name": "VigenciaHasta",
-				"type": "varchar"
+				"type": "date"
 			},
 			{
 				"name": "Estado",
-				"type": "varchar"
+				"type": "nvarchar"
 			}
 		],
 		"typeProperties": {
