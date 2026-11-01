@@ -15,10 +15,24 @@
 					"name": "source1"
 				}
 			],
-			"sinks": [],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "dw_silver_demanda_paradas_sql",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
 			"transformations": [
 				{
 					"name": "derivedColumn1"
+				},
+				{
+					"name": "select1"
+				},
+				{
+					"name": "filter2"
 				}
 			],
 			"scriptLines": [
@@ -38,10 +52,58 @@
 				"     validateSchema: false,",
 				"     isolationLevel: 'READ_UNCOMMITTED',",
 				"     format: 'table') ~> source1",
-				"source1 derive(FechaServicio_Clean = iif(instr(FechaServicio, '/') > 0,      substring(FechaServicio, 7, 4) + '-' + substring(FechaServicio, 4, 2) + '-' + substring(FechaServicio, 1, 2),      FechaServicio),",
-				"          columna1 = ERROR_FUNCTION(''),",
-				"          columna2 = ERROR_FUNCTION(''),",
-				"          columna3 = ERROR_FUNCTION('')) ~> derivedColumn1"
+				"source1 derive(DemandaId = iif(isNull(DemandaId) || trim(DemandaId) == '', uuid(), DemandaId),",
+				"          FechaServicio = iif(instr(FechaServicio, '/') > 0, toDate(FechaServicio, 'dd/MM/yyyy'), toDate(FechaServicio, 'yyyy-MM-dd')),",
+				"          RutaHistoricaId = iif(startsWith(RutaHistoricaId, 'RH-'), RutaHistoricaId,     iif(startsWith(RutaHistoricaId, 'R-'), replace(RutaHistoricaId, 'R-', 'RH-'),         iif(startsWith(RutaHistoricaId, 'Ruta '), replace(RutaHistoricaId, 'Ruta ', 'RH-'),             concat('RH-', lpad(RutaHistoricaId, 2, '0'))         )     ) ),",
+				"          ValidacionesTarjeta = toInteger(ValidacionesTarjeta),",
+				"          Descensos = toInteger(Descensos),",
+				"          DemandaNoAtendida = toInteger(DemandaNoAtendida)) ~> derivedColumn1",
+				"filter2 select(mapColumn(",
+				"          DemandaId,",
+				"          FechaServicio,",
+				"          RutaHistoricaId,",
+				"          ParadaHistoricaId,",
+				"          Franja,",
+				"          ValidacionesTarjeta,",
+				"          Descensos,",
+				"          DemandaNoAtendida,",
+				"          Metodo",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select1",
+				"derivedColumn1 filter(not(isNull(FechaServicio)) && not(isNull(ParadaHistoricaId))) ~> filter2",
+				"select1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          DemandaId as string,",
+				"          FechaServicio as date,",
+				"          RutaHistoricaId as string,",
+				"          ParadaHistoricaId as string,",
+				"          Franja as string,",
+				"          ValidacionesTarjeta as integer,",
+				"          Descensos as integer,",
+				"          DemandaNoAtendida as integer,",
+				"          Metodo as string",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          DemandaId,",
+				"          FechaServicio,",
+				"          RutaHistoricaId,",
+				"          ParadaHistoricaId,",
+				"          Franja,",
+				"          ValidacionesTarjeta,",
+				"          Descensos,",
+				"          DemandaNoAtendida,",
+				"          Metodo",
+				"     )) ~> sink1"
 			]
 		}
 	}
