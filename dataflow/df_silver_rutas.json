@@ -8,14 +8,96 @@
 		"typeProperties": {
 			"sources": [
 				{
+					"dataset": {
+						"referenceName": "dw_bronze_rutas_sql",
+						"type": "DatasetReference"
+					},
 					"name": "source1"
 				}
 			],
-			"sinks": [],
-			"transformations": [],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "dw_silver_rutas_sql",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "derivedColumn1"
+				},
+				{
+					"name": "select1"
+				}
+			],
 			"scriptLines": [
-				"source(allowSchemaDrift: true,",
-				"     validateSchema: false) ~> source1"
+				"source(output(",
+				"          AnioFuente as string,",
+				"          RutaHistoricaId as string,",
+				"          CodigoRuta as string,",
+				"          NombreRuta as string,",
+				"          Origen as string,",
+				"          Destino as string,",
+				"          VigenciaDesde as string,",
+				"          VigenciaHasta as string,",
+				"          Estado as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table') ~> source1",
+				"source1 derive(RutaHistoricaId = iif(isNull(RutaHistoricaId) || trim(RutaHistoricaId) == '',     /* Si es nulo, reconstruir desde CodigoRuta */     iif(startsWith(CodigoRuta, 'R-'), replace(CodigoRuta, 'R-', 'RH-'),     iif(startsWith(CodigoRuta, 'Ruta '), concat('RH-', lpad(replace(CodigoRuta, 'Ruta ', ''), 2, '0')),     iif(regexMatch(CodigoRuta, '^[0-9]+$'), concat('RH-', lpad(CodigoRuta, 2, '0')),     replace(CodigoRuta, 'R', 'RH-')))),     /* Si NO es nulo, limpiar el RutaHistoricaId original */     iif(startsWith(RutaHistoricaId, 'RH-'), RutaHistoricaId,     iif(startsWith(RutaHistoricaId, 'R-'), replace(RutaHistoricaId, 'R-', 'RH-'),     iif(startsWith(RutaHistoricaId, 'Ruta '), concat('RH-', lpad(replace(RutaHistoricaId, 'Ruta ', ''), 2, '0')),     iif(regexMatch(RutaHistoricaId, '^[0-9]+$'), concat('RH-', lpad(RutaHistoricaId, 2, '0')), RutaHistoricaId)))) ),",
+				"          CodigoRuta = iif(startsWith(CodigoRuta, 'R-'), CodigoRuta,     iif(startsWith(CodigoRuta, 'Ruta '), concat('R-', lpad(trim(replace(CodigoRuta, 'Ruta', '')), 2, '0')),         iif(regexMatch(CodigoRuta, '^[0-9]+$'), concat('R-', lpad(CodigoRuta, 2, '0')),             replace(CodigoRuta, 'R', 'R-')         )     ) ),",
+				"          NombreRuta = trim(NombreRuta),",
+				"          Origen = trim(Origen),",
+				"          Destino = trim(Destino),",
+				"          VigenciaDesde = iif(instr(VigenciaDesde, '/') > 0, toDate(VigenciaDesde, 'dd/MM/yyyy'),     iif(instr(VigenciaDesde, '-') > 0, toDate(VigenciaDesde, 'yyyy-MM-dd'),         addDays(toDate('1899-12-30'), toInteger(VigenciaDesde))     ) ),",
+				"          VigenciaHasta = iif(instr(VigenciaHasta, '/') > 0, toDate(VigenciaHasta, 'dd/MM/yyyy'),     iif(instr(VigenciaHasta, '-') > 0, toDate(VigenciaHasta, 'yyyy-MM-dd'),         addDays(toDate('1899-12-30'), toInteger(VigenciaHasta))     ) ),",
+				"          Estado = upper(trim(Estado))) ~> derivedColumn1",
+				"derivedColumn1 select(mapColumn(",
+				"          RutaHistoricaId,",
+				"          CodigoRuta,",
+				"          NombreRuta,",
+				"          Origen,",
+				"          Destino,",
+				"          VigenciaDesde,",
+				"          VigenciaHasta,",
+				"          Estado",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select1",
+				"select1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          RutaHistoricaId as string,",
+				"          CodigoRuta as string,",
+				"          NombreRuta as string,",
+				"          Origen as string,",
+				"          Destino as string,",
+				"          VigenciaDesde as date,",
+				"          VigenciaHasta as date,",
+				"          Estado as string",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          RutaHistoricaId,",
+				"          CodigoRuta,",
+				"          NombreRuta,",
+				"          Origen,",
+				"          Destino,",
+				"          VigenciaDesde,",
+				"          VigenciaHasta,",
+				"          Estado",
+				"     )) ~> sink1"
 			]
 		}
 	}
