@@ -1,0 +1,100 @@
+{
+	"name": "df_silver_vehiculos",
+	"properties": {
+		"folder": {
+			"name": "Silver"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "dw_bronze_vehiculos_sql",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "dw_silver_vehiculos_sql",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "derivedColumn1"
+				},
+				{
+					"name": "select1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          AnioFuente as string,",
+				"          VehiculoId as string,",
+				"          Placa as string,",
+				"          TipoVehiculo as string,",
+				"          CapacidadEfectiva as string,",
+				"          VigenciaDesde as string,",
+				"          VigenciaHasta as string,",
+				"          Estado as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table') ~> source1",
+				"source1 derive(VehiculoId = iif(isNull(VehiculoId) || trim(VehiculoId) == '',     /* Si es nulo, reconstruir desde Placa (asumiendo formato ABC-XXX) */     concat('V-', right(Placa, 3)),     /* Si no es nulo, estandarizar */     iif(startsWith(VehiculoId, 'V-'), VehiculoId, concat('V-', lpad(VehiculoId, 3, '0'))) ),",
+				"          VigenciaDesde = iif(instr(VigenciaDesde, '/') > 0, toDate(VigenciaDesde, 'dd/MM/yyyy'),     iif(instr(VigenciaDesde, '-') > 0, toDate(VigenciaDesde, 'yyyy-MM-dd'),         addDays(toDate('1899-12-30'), toInteger(VigenciaDesde))     ) ),",
+				"          VigenciaHasta = iif(instr(VigenciaHasta, '/') > 0, toDate(VigenciaHasta, 'dd/MM/yyyy'),     iif(instr(VigenciaHasta, '-') > 0, toDate(VigenciaHasta, 'yyyy-MM-dd'),         addDays(toDate('1899-12-30'), toInteger(VigenciaHasta))     ) ),",
+				"          CapacidadEfectiva = toInteger(CapacidadEfectiva),",
+				"          Placa = upper(trim(Placa)),",
+				"          TipoVehiculo = upper(trim(TipoVehiculo)),",
+				"          {Estado } = upper(trim(Estado))) ~> derivedColumn1",
+				"derivedColumn1 select(mapColumn(",
+				"          VehiculoId,",
+				"          Placa,",
+				"          TipoVehiculo,",
+				"          CapacidadEfectiva,",
+				"          VigenciaDesde,",
+				"          VigenciaHasta,",
+				"          Estado,",
+				"          {Estado }",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select1",
+				"select1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          VehiculoId as string,",
+				"          Placa as string,",
+				"          TipoVehiculo as string,",
+				"          CapacidadEfectiva as integer,",
+				"          VigenciaDesde as date,",
+				"          VigenciaHasta as date,",
+				"          Estado as string",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          VehiculoId,",
+				"          Placa,",
+				"          TipoVehiculo,",
+				"          CapacidadEfectiva,",
+				"          VigenciaDesde,",
+				"          VigenciaHasta,",
+				"          Estado",
+				"     )) ~> sink1"
+			]
+		}
+	}
+}
