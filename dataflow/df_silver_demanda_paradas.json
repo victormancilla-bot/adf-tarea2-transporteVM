@@ -1,0 +1,48 @@
+{
+	"name": "df_silver_demanda_paradas",
+	"properties": {
+		"folder": {
+			"name": "Silver"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "dw_bronze_demanda_paradas_sql",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [],
+			"transformations": [
+				{
+					"name": "derivedColumn1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          AnioFuente as string,",
+				"          DemandaId as string,",
+				"          FechaServicio as string,",
+				"          RutaHistoricaId as string,",
+				"          ParadaHistoricaId as string,",
+				"          Franja as string,",
+				"          ValidacionesTarjeta as string,",
+				"          Descensos as string,",
+				"          DemandaNoAtendida as string,",
+				"          Metodo as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table') ~> source1",
+				"source1 derive(FechaServicio_Clean = iif(instr(FechaServicio, '/') > 0,      substring(FechaServicio, 7, 4) + '-' + substring(FechaServicio, 4, 2) + '-' + substring(FechaServicio, 1, 2),      FechaServicio),",
+				"          columna1 = ERROR_FUNCTION(''),",
+				"          columna2 = ERROR_FUNCTION(''),",
+				"          columna3 = ERROR_FUNCTION('')) ~> derivedColumn1"
+			]
+		}
+	}
+}
